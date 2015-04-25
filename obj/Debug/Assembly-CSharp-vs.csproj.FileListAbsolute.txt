@@ -1,0 +1,14 @@
+C:\Users\Khamraj\Documents\GitHub\Server\Temp\bin\Debug\Assembly-CSharp.dll
+C:\Users\Khamraj\Documents\GitHub\Server\Temp\bin\Debug\Assembly-CSharp.pdb
+C:\Users\Khamraj\Documents\GitHub\Server\Temp\bin\Debug\UnityEditor.dll
+C:\Users\Khamraj\Documents\GitHub\Server\Temp\bin\Debug\UnityEditor.iOS.Extensions.Xcode.dll
+C:\Users\Khamraj\Documents\GitHub\Server\Temp\bin\Debug\UnityEngine.dll
+C:\Users\Khamraj\Documents\GitHub\Server\Temp\bin\Debug\UnityEngine.UI.dll
+C:\Users\Khamraj\Documents\GitHub\Server\Temp\bin\Debug\Mono.Cecil.dll
+C:\Users\Khamraj\Documents\GitHub\Server\Temp\bin\Debug\Unity.SerializationLogic.dll
+C:\Users\Khamraj\Documents\GitHub\Server\Temp\bin\Debug\Unity.DataContract.dll
+C:\Users\Khamraj\Documents\GitHub\Server\Temp\bin\Debug\ICSharpCode.NRefactory.dll
+C:\Users\Khamraj\Documents\GitHub\Server\Temp\bin\Debug\Unity.CecilTools.dll
+C:\Users\Khamraj\Documents\GitHub\Server\obj\Debug\Assembly-CSharp-vs.csprojResolveAssemblyReference.cache
+C:\Users\Khamraj\Documents\GitHub\Server\obj\Debug\Assembly-CSharp.dll
+C:\Users\Khamraj\Documents\GitHub\Server\obj\Debug\Assembly-CSharp.pdb
