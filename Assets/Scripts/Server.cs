@@ -13,18 +13,53 @@ public class Server : MonoBehaviour
 
 	public Text textIP;
 	public Text textConnections;
-	public Text textConnectionList;
+
 
 	//Private
 	private NetworkView _net;
-	private int _serverPort = 1456;
-	private int _maxConnections = 20;
-	private string _password = "";
 	private bool _isRunning = false;
+	private int _serverPort = 1234;
+	private int _maxConnections = 5;
+	private string _password = "";
 	private NetworkPlayer[] _connections;
-	private List<PendingPlayer> _pendingPlayers = new List<PendingPlayer>();
-	private List<PlayerData> _activePlayers = new List<PlayerData>();
+	private Dictionary<NetworkPlayer, PendingPlayer> _pendingPlayers = new Dictionary<NetworkPlayer,PendingPlayer>();
+	private Dictionary<NetworkPlayer, PlayerData> _activePlayers = new Dictionary<NetworkPlayer, PlayerData>();
 	private List<string> _messageLog = new List<string>();
+
+	//Getter Setters
+	public string serverPort 
+	{
+		get
+		{
+			return _serverPort.ToString();
+		}
+		set
+		{
+			int.TryParse(value, out _serverPort);
+		}
+	}
+	public string maxConnections 
+	{
+		get
+		{
+			return _maxConnections.ToString();
+		}
+		set
+		{
+			int.TryParse(value, out _maxConnections);
+		}
+	}
+	public string password 
+	{ 
+		get
+		{
+			return _password;
+		}
+		set
+		{
+			_password = value;
+		}
+	}
 
 	//Start Server
 	public void StartServer()
@@ -44,46 +79,38 @@ public class Server : MonoBehaviour
 	//Update GUI
 	void UpdateGUI()
 	{
-		textIP.text = "Server IP: " + Network.natFacilitatorIP + ":" + _serverPort;
+		textIP.text = "Server IP: " + Network.player.ipAddress + ":" + serverPort;
 		_connections = Network.connections;
-		textConnections.text = "Connections: " + _connections.Length + "/" + _maxConnections;
-		if (_connections.Length == 0)
-		{
-			textConnectionList.text = "No connections";
-			return;
-		}
+		textConnections.text = "Connections: " + _connections.Length + "/" + maxConnections;
 	}
 
 	//Listen for Connections
 	void OnPlayerConnected(NetworkPlayer player)
 	{
-		_pendingPlayers.Add(new PendingPlayer(player, Time.time + timeout));
+		_pendingPlayers.Add(player, new PendingPlayer(player, Time.time + timeout));
 		UpdateGUI();
 	}
 	void OnPlayerDisconnected(NetworkPlayer player)
 	{
+		_activePlayers.Remove(player);
 		UpdateGUI();
 	}
 
 	//Receive Player Data
 	[RPC]
-	public void PlayerData(PlayerData playerData)
+	public void PlayerData(object playerData)
 	{
-		NetworkPlayer p = playerData.getNetPlayer();
-		int index = -1;
-		for(int i = 0; i < _pendingPlayers.Count; i++)
+		PlayerData data = playerData as PlayerData;
+		NetworkPlayer p = data.getNetPlayer();
+		if(_pendingPlayers.ContainsKey(p) && !_activePlayers.ContainsValue(data))
 		{
-			if (p == _pendingPlayers[i].getPlayer())
-				index = i;
-		}
-		if(index == -1)
+			_pendingPlayers.Remove(p);
+			_activePlayers.Add(p, data);
+			_net.RPC("Connected", p);
+		}else
 		{
 			Network.CloseConnection(p, true);
-			return;
 		}
-		_activePlayers.Add(playerData);
-		_pendingPlayers.RemoveAt(index);
-		_net.RPC("Connected", p);
 	}
 
 	//Get Connection List
@@ -98,33 +125,5 @@ public class Server : MonoBehaviour
 			connectionList += "\n";
 		}
 		return connectionList;
-	}
-
-	//Get Set serverPort
-	public int getServerPort()
-	{
-		return _serverPort;
-	}
-	public void setServerPort(string port)
-	{
-		int.TryParse(port, out _serverPort);
-	}
-	//Get Set maxConnections
-	public int getMaxConnections()
-	{
-		return _maxConnections;
-	}
-	public void setMaxConnections(string max)
-	{
-		int.TryParse(max, out _maxConnections);
-	}
-	//Get Set password
-	public string getPassword()
-	{
-		return _password;
-	}
-	public void setPassword(string password)
-	{
-		_password = password;
 	}
 }
