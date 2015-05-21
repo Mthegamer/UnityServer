@@ -1,34 +1,24 @@
 using UnityEngine;
 using System.Collections;
+using ProtoBuf;
 
-
-public class PlayerData
+namespace Data
 {
-	//Private
-	private string _playerName;
-	private NetworkPlayer _netPlayer;
+	[ProtoContract]
+	public class PlayerData
+	{
+		//Private
+		[ProtoMember(1)]
+		public string playerName;
 
-	public PlayerData(string playerName, NetworkPlayer netPlayer)
-	{
-		_playerName = playerName;
-		_netPlayer = netPlayer;
-	}
+		public PlayerData()
+		{
 
-	public PlayerData(string playerName)
-	{
-		_playerName = playerName;
-		_netPlayer = Network.player;
-	}
+		}
 
-	//Get _playerName
-	public string getPlayerName()
-	{
-		return _playerName;
-	}
-	
-	//Get _netPlayer
-	public NetworkPlayer getNetPlayer()
-	{
-		return _netPlayer;
+		public PlayerData(string playerName)
+		{
+			this.playerName = playerName;
+		}
 	}
 }

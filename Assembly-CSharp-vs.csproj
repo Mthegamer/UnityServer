@@ -50,11 +50,14 @@
      <Compile Include="Assets\Scripts\EventManager.cs" />
      <Compile Include="Assets\Scripts\PendingPlayer.cs" />
      <Compile Include="Assets\Scripts\PlayerData.cs" />
+     <Compile Include="Assets\Scripts\ProtoLoader.cs" />
      <Compile Include="Assets\Scripts\Server.cs" />
      <Compile Include="Assets\Scripts\SwitchMode.cs" />
-     <Compile Include="Assets\test.cs" />
  <Reference Include="UnityEngine.UI">
  <HintPath>C:/Program Files/Unity/Editor/Data/UnityExtensions/Unity/GUISystem/UnityEngine.UI.dll</HintPath>
+ </Reference>
+ <Reference Include="protobuf-net">
+ <HintPath>C:/Users/Khamraj/Documents/GitHub/Server/Assets/Plugins/protobuf-net.dll</HintPath>
  </Reference>
  <Reference Include="UnityEditor.iOS.Extensions.Xcode">
  <HintPath>C:/Program Files/Unity/Editor/Data/PlaybackEngines/iossupport/UnityEditor.iOS.Extensions.Xcode.dll</HintPath>

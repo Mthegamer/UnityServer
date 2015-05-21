@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
 using System.Collections.Generic;
+using Data;
 
 
 [RequireComponent (typeof(NetworkView))]
@@ -158,16 +159,18 @@ public class Server : MonoBehaviour
 	//Listen for Connections
 	void OnPlayerConnected(NetworkPlayer player)
 	{
-		if (mode != NetMode.Server)
-			return;
-		_pendingPlayers.Add(player, new PendingPlayer(player, Time.time + timeout));
-		logLocalMessage(player.ipAddress + " attempting connection.");
+		if (mode == NetMode.Server)
+		{
+			_pendingPlayers.Add(player, new PendingPlayer(player, Time.time + timeout));
+			logLocalMessage(player.ipAddress + " attempting connection.");
+		}
 		UpdateGUI();
 	}
 	void OnPlayerDisconnected(NetworkPlayer player)
 	{
 		if (mode != NetMode.Server)
 			return;
+		logNetworkMessage(_activePlayers[player].playerName + " has disconneted.");
 		_activePlayers.Remove(player);
 		UpdateGUI();
 	}
@@ -177,7 +180,7 @@ public class Server : MonoBehaviour
 	{
 		if (mode != NetMode.Client)
 			return;
-		_net.RPC("PlayerData", RPCMode.Server, _player);
+		_net.RPC("PlayerData", RPCMode.Server, ProtoLoader.serializeData<PlayerData>(_player), Network.player);
 		_curState = "Authenthicating...";
 		UpdateGUI();
 	}
@@ -193,23 +196,22 @@ public class Server : MonoBehaviour
 
 	//Receive Player Data
 	[RPC]
-	public void PlayerData(PlayerData playerDdata)
+	public void PlayerData(byte[] playerData, NetworkPlayer player)
 	{
 		if (mode != NetMode.Server)
 			return;
-		PlayerData data = playerDdata as PlayerData;
-		NetworkPlayer p = data.getNetPlayer();
-		logLocalMessage(data.getPlayerName() + "'s playerData received.");
-		if(_pendingPlayers.ContainsKey(p) && !_activePlayers.ContainsValue(data))
+		PlayerData data = ProtoLoader.deserializeData<PlayerData>(playerData);
+		logLocalMessage(data.playerName + "'s playerData received.");
+		if(_pendingPlayers.ContainsKey(player) && !_activePlayers.ContainsValue(data))
 		{
-			_pendingPlayers.Remove(p);
-			_activePlayers.Add(p, data);
-			_net.RPC("Connected", p);
-			logLocalMessage(data.getPlayerName() + "'s connection was accepted.");
+			_pendingPlayers.Remove(player);
+			_activePlayers.Add(player, data);
+			_net.RPC("Connected", player);
+			logLocalMessage(data.playerName + "'s connection was accepted.");
 		}else
 		{
-			Network.CloseConnection(p, true);
-			logLocalMessage(data.getPlayerName() + "'s connection was rejected.");
+			Network.CloseConnection(player, true);
+			logLocalMessage(data.playerName + "'s connection was rejected.");
 		}
 		UpdateGUI();
 	}
