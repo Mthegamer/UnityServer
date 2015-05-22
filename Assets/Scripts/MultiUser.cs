@@ -2,11 +2,10 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
 using System.Collections.Generic;
-using Data;
+using NetworkData;
 
-
-[RequireComponent (typeof(NetworkView))]
-public class Server : MonoBehaviour 
+[RequireComponent(typeof(NetworkView))]
+public class MultiUser : MonoBehaviour
 {
 	public enum NetMode
 	{
@@ -24,8 +23,11 @@ public class Server : MonoBehaviour
 	public Text textConnections;
 	public Text textMessageLog;
 
-
 	//Private
+	private string _errorColor = "#ff1111";
+	private string _optionalColor = "#44ff44";
+	private string _requiredColor = "#4444ff";
+	private string _commandColor = "#ffff44";
 	private NetworkView _net;
 	private PlayerData _player;
 	private string _playerName = "playerName";
@@ -36,8 +38,9 @@ public class Server : MonoBehaviour
 	private bool _isRunning = false;
 	private bool _isConnected = false;
 	private NetworkPlayer[] _connections;
-	private Dictionary<NetworkPlayer, PendingPlayer> _pendingPlayers = new Dictionary<NetworkPlayer,PendingPlayer>();
+	private Dictionary<NetworkPlayer, PendingPlayer> _pendingPlayers = new Dictionary<NetworkPlayer, PendingPlayer>();
 	private Dictionary<NetworkPlayer, PlayerData> _activePlayers = new Dictionary<NetworkPlayer, PlayerData>();
+	private Dictionary<string, NetworkPlayer> _netPlayers = new Dictionary<string, NetworkPlayer>();
 	private List<string> _messageLog = new List<string>();
 	private string _curState = "Disconnected";
 
@@ -64,7 +67,7 @@ public class Server : MonoBehaviour
 			_serverIP = value;
 		}
 	}
-	public string serverPort 
+	public string serverPort
 	{
 		get
 		{
@@ -75,7 +78,7 @@ public class Server : MonoBehaviour
 			int.TryParse(value, out _serverPort);
 		}
 	}
-	public string maxConnections 
+	public string maxConnections
 	{
 		get
 		{
@@ -86,8 +89,8 @@ public class Server : MonoBehaviour
 			int.TryParse(value, out _maxConnections);
 		}
 	}
-	public string password 
-	{ 
+	public string password
+	{
 		get
 		{
 			return _password;
@@ -115,7 +118,7 @@ public class Server : MonoBehaviour
 		_net = GetComponent<NetworkView>();
 		UpdateGUI();
 	}
-	
+
 	//Connect to Server
 	public void Connect()
 	{
@@ -140,13 +143,14 @@ public class Server : MonoBehaviour
 			textIP.text = "Server IP: " + Network.player.ipAddress + ":" + serverPort;
 			_connections = Network.connections;
 			textConnections.text = "Connections: " + _activePlayers.Count + "/" + maxConnections;
-		}else
+		}
+		else
 		{
 			textServerState.text = "State: " + _curState;
 			textConnections.text = "Connections: " + Network.connections.Length.ToString();
 		}
 		string log = "";
-		for (int i = 0; i < _messageLog.Count; i++ )
+		for (int i = 0; i < _messageLog.Count; i++)
 		{
 			if (i < _messageLog.Count - 1)
 				log += _messageLog[i] + "\n";
@@ -154,6 +158,82 @@ public class Server : MonoBehaviour
 				log += _messageLog[i];
 		}
 		textMessageLog.text = log;
+	}
+
+	public void Command(string msg)
+	{
+		Debug.Log(msg);
+		if (msg.Length == 0)
+			return;
+		if (msg[0] == '/')
+		{
+			msg = msg.Substring(1);
+			Debug.Log(msg);
+			string[] args = msg.Split(' ');
+			switch (args[0])
+			{
+				case "list":
+					if (args.Length >= 1) //List connections
+					{
+						logLocalMessage(getConnectionList());
+					}
+					else if (args.Length == 2) //List connections and broadcast
+					{
+						if (mode == NetMode.Server)
+						{
+							if (args[1] == "true")
+								logNetworkMessage("<color=" + _commandColor + ">" + getConnectionList() + "</color>");
+							else if (args[1] == "false")
+								logLocalMessage("<color=" + _commandColor + ">" + getConnectionList() + "</color>");
+							else //List show error message
+							{
+								logLocalMessage("<b><color=" + _errorColor + ">Invalid Sytax</color></b>");
+								logLocalMessage("<b><color=" + _commandColor + ">/list</color> <i><color=" + _optionalColor + "><broadcast?>[true/false]</color></i></b>");
+							}
+						}
+						else
+							logLocalMessage("<b><color=" + _errorColor + ">You don't have permission to use this command</color></b>");
+					}
+					break;
+				case "kick":
+					if (mode == NetMode.Server)
+					{
+						if (args.Length >= 2) //kick player
+						{
+							if (args.Length == 2) //Just kick player
+							{
+								if (_netPlayers.ContainsKey(args[1]))
+								{
+									Network.CloseConnection(_netPlayers[args[1]], true);
+									logLocalMessage("<color=" + _commandColor + ">Player " + args[1] + ", was kicked</color>");
+								}
+								else
+								{
+									logLocalMessage("<color=" + _errorColor + ">Player not found.</color>");
+								}
+							}
+							else if (args.Length == 3) //Kick and send reason
+							{
+								string reason = string.Join("", args, 2, args.Length - 3);
+								Network.CloseConnection(_netPlayers[args[2]], true);
+								logNetworkMessage("<color=" + _commandColor + ">Player " + args[2] + ", was kicked for " + reason + "</color>");
+							}
+						}
+						else
+						{
+							logLocalMessage("<color=" + _errorColor + ">Invalid Sytax</color>");
+							logLocalMessage("<b><color=" + _commandColor + ">/kick</color> <color=" + _requiredColor + "><playerName></color> <color=" + _optionalColor + "><i><reason></i></color></b>");
+						}
+					}
+					else
+						logLocalMessage("<b><color=" + _errorColor + ">You don't have permission to use this command</color></b>");
+					break;
+			}
+		}
+		else
+		{
+			logNetworkMessage(msg);
+		}
 	}
 
 	//Listen for Connections
@@ -171,6 +251,7 @@ public class Server : MonoBehaviour
 		if (mode != NetMode.Server)
 			return;
 		logNetworkMessage(_activePlayers[player].playerName + " has disconneted.");
+		_netPlayers.Remove(_activePlayers[player].playerName);
 		_activePlayers.Remove(player);
 		UpdateGUI();
 	}
@@ -185,36 +266,44 @@ public class Server : MonoBehaviour
 		UpdateGUI();
 	}
 
-	void OnDisconnectedFromServer()
-	{
-		if (mode != NetMode.Client)
-			return;
-		_curState = "Disconnected";
-		UpdateGUI();
-		Application.LoadLevel(Application.loadedLevel);
-	}
-
 	//Receive Player Data
 	[RPC]
-	public void PlayerData(byte[] playerData, NetworkPlayer player)
+	public void PlayerData(byte[] playerData, NetworkPlayer netPlayer)
 	{
 		if (mode != NetMode.Server)
 			return;
 		PlayerData data = ProtoLoader.deserializeData<PlayerData>(playerData);
 		logLocalMessage(data.playerName + "'s playerData received.");
-		if(_pendingPlayers.ContainsKey(player) && !_activePlayers.ContainsValue(data))
+		if (_pendingPlayers.ContainsKey(netPlayer) && !_activePlayers.ContainsValue(data))
 		{
-			_pendingPlayers.Remove(player);
-			_activePlayers.Add(player, data);
-			_net.RPC("Connected", player);
+			_pendingPlayers.Remove(netPlayer);
+			_activePlayers.Add(netPlayer, data);
+			_netPlayers.Add(data.playerName, netPlayer);
+			_net.RPC("Connected", netPlayer);
 			logLocalMessage(data.playerName + "'s connection was accepted.");
-		}else
+		}
+		else
 		{
-			Network.CloseConnection(player, true);
+			Network.CloseConnection(netPlayer, true);
 			logLocalMessage(data.playerName + "'s connection was rejected.");
 		}
 		UpdateGUI();
 	}
+
+	//Connection loss
+	void OnDisconnectedFromServer()
+	{
+		_curState = "Disconnected";
+		UpdateGUI();
+		Application.LoadLevel(Application.loadedLevel);
+	}
+	void OnFailedToConnect()
+	{
+		_curState = "Failed to Connect";
+		UpdateGUI();
+		Application.LoadLevel(Application.loadedLevel);
+	}
+
 
 	//Recieve connection confirmation
 	[RPC]
@@ -232,6 +321,8 @@ public class Server : MonoBehaviour
 	string getConnectionList()
 	{
 		string connectionList = "";
+		if (connectionList.Length == 0)
+			return "There are no players online.";
 		for (int i = 0; i < _connections.Length; i++)
 		{
 			NetworkPlayer cur = _connections[i];
@@ -253,5 +344,6 @@ public class Server : MonoBehaviour
 	{
 		Debug.Log(message);
 		_messageLog.Add(message);
+		UpdateGUI();
 	}
 }
